@@ -1,0 +1,67 @@
+# Load necessary libraries
+library(ggplot2)
+library(factoextra) # For PCA visualization
+library(cluster) # For clustering visualization
+# Step 1: Load the dataset
+data &lt;-
+read.csv(&quot;C:\\Users\\TOSHIBA\\Desktop\\DSCE\\5thSem_ASPA\\Statistics_class\\Lab\\Mall_Cus
+tomers.csv&quot;)
+# Step 2: Inspect the dataset
+str(data)
+summary(data)
+# Step 3: Preprocessing
+# Select relevant columns for clustering
+clustering_data &lt;- data[, c(&quot;Annual.Income&quot;, &quot;Spending.Score&quot;)]
+# Rename columns for easier reference
+colnames(clustering_data) &lt;- c(&quot;Annual_Income&quot;, &quot;Spending_Score&quot;)
+# Check for missing values
+if (any(is.na(clustering_data))) {
+stop(&quot;Dataset contains missing values. Please clean the data before proceeding.&quot;)
+}
+# Standardize the data for PCA and clustering
+scaled_data &lt;- scale(clustering_data)
+# Step 4: Determine optimal clusters using the Elbow method
+set.seed(42) # For reproducibility
+wcss &lt;- vector()
+for (i in 1:10) {
+kmeans_result &lt;- kmeans(scaled_data, centers = i, nstart = 10)
+wcss[i] &lt;- kmeans_result$tot.withinss
+}
+# Plot the Elbow method
+plot(1:10, wcss, type = &quot;b&quot;, pch = 19, frame = FALSE,
+xlab = &quot;Number of Clusters (k)&quot;,
+ylab = &quot;Within-cluster Sum of Squares (WCSS)&quot;,
+
+
+main = &quot;Elbow Method for Optimal k&quot;)
+# Step 5: Apply K-Means Clustering
+optimal_clusters &lt;- 5 # Based on the Elbow method
+kmeans_result &lt;- kmeans(scaled_data, centers = optimal_clusters, nstart = 10)
+# Add cluster labels to the original data
+data$Cluster &lt;- kmeans_result$cluster
+# Step 6: Visualize Clusters with PCA
+# Perform PCA on the scaled data
+pca_result &lt;- prcomp(scaled_data)
+# Create a data frame for PCA visualization
+pca_data &lt;- data.frame(pca_result$x[, 1:2]) # Take first 2 principal components
+pca_data$Cluster &lt;- as.factor(kmeans_result$cluster)
+# Plot PCA results
+ggplot(pca_data, aes(x = PC1, y = PC2, color = Cluster)) +
+geom_point(size = 3) +
+labs(title = &quot;Customer Segmentation using PCA&quot;,
+x = &quot;Principal Component 1 (PC1)&quot;,
+y = &quot;Principal Component 2 (PC2)&quot;,
+color = &quot;Cluster&quot;) +
+theme_minimal()
+# Step 7: Analyze Cluster Characteristics
+for (i in 1:optimal_clusters) {
+cat(sprintf(&quot;\nCluster %d:\n&quot;, i))
+print(summary(data[data$Cluster == i, c(&quot;Annual.Income&quot;, &quot;Spending.Score&quot;)]))
+}
+# Step 8: Visualize Clusters with a Pairplot
+fviz_cluster(kmeans_result, data = scaled_data,
+geom = &quot;point&quot;, ellipse.type = &quot;norm&quot;,
+main = &quot;Cluster Visualization&quot;)
+write.csv(data,
+&quot;C:\\Users\\TOSHIBA\\Desktop\\DSCE\\5thSem_ASPA\\Statistics_class\\Lab\\segmented_custo
+mers3.csv&quot;, row.names = FALSE)

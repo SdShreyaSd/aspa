@@ -1,0 +1,68 @@
+# Step 1: Load required libraries
+library(ggplot2) # For data visualization
+library(factoextra) # For visualizing results
+library(cluster) # For clustering algorithms
+library(DMwR2) # For outlier detection
+# Step 2: Load the dataset
+data &lt;-
+read.csv(&quot;C:\\Users\\TOSHIBA\\Desktop\\DSCE\\5thSem_ASPA\\Statistics_class\\Lab\\network_traf
+fic.csv&quot;)
+# Step 3: Inspect the data
+str(data) # View structure of the dataset
+summary(data) # Summary statistics
+head(data) # View the first few rows of the dataset
+# Step 4: Preprocess the data
+# Select relevant numeric columns for anomaly detection
+numeric_data &lt;- data[, c(&quot;Duration&quot;, &quot;Source_Bytes&quot;, &quot;Destination_Bytes&quot;)]
+# Check for missing values
+if (any(is.na(numeric_data))) {
+
+stop(&quot;Dataset contains missing values. Please clean the data before proceeding.&quot;)
+}
+# Select only numeric columns
+numeric_data &lt;- numeric_data[, sapply(numeric_data, is.numeric)]
+# Check for missing values and handle them
+if (any(is.na(numeric_data))) {
+numeric_data &lt;- data.frame(lapply(numeric_data, function(x) {
+if (is.numeric(x)) {
+x[is.na(x)] &lt;- mean(x, na.rm = TRUE) # Replace missing values with the mean
+}
+return(x)
+}))
+cat(&quot;Missing values have been replaced with the mean of each column.\n&quot;)
+}
+# Standardize the data
+scaled_data &lt;- scale(numeric_data)
+cat(&quot;Data has been successfully scaled.\n&quot;)
+# Step 5: Standardize the data
+#scaled_data &lt;- scale(numeric_data)
+# Step 6: Apply K-Means Clustering for anomaly detection
+set.seed(42) # For reproducibility
+kmeans_result &lt;- kmeans(scaled_data, centers = 3, nstart = 10)
+# Add cluster labels to the dataset
+data$Cluster &lt;- kmeans_result$cluster
+# Step 7: Identify anomalies using distance from cluster centroids
+centroids &lt;- kmeans_result$centers
+distances &lt;- apply(scaled_data, 1, function(x) min(sqrt(rowSums((t(centroids) - x)^2))))
+# Define a threshold for anomalies (e.g., top 5% farthest points)
+threshold &lt;- quantile(distances, 0.95)
+data$Anomaly &lt;- ifelse(distances &gt; threshold, &quot;Yes&quot;, &quot;No&quot;)
+# Step 8: Visualize anomalies
+ggplot(data, aes(x = Source_Bytes, y = Destination_Bytes, color = Anomaly)) +
+geom_point(size = 3) +
+labs(title = &quot;Anomaly Detection in Network Traffic&quot;,
+x = &quot;Source Bytes&quot;,
+y = &quot;Destination Bytes&quot;,
+color = &quot;Anomaly&quot;) +
+theme_minimal()
+# Step 9: Evaluate the model
+# Print the number of anomalies
+cat(&quot;Number of anomalies detected:&quot;, sum(data$Anomaly == &quot;Yes&quot;), &quot;\n&quot;)
+# Summary statistics of anomalies
+anomalies &lt;- data[data$Anomaly == &quot;Yes&quot;, ]
+summary(anomalies)
+
+# Step 10: Save the results to a CSV file
+write.csv(data,
+&quot;C:\\Users\\TOSHIBA\\Desktop\\DSCE\\5thSem_ASPA\\Statistics_class\\Lab\\network_anomalies4.
+csv&quot;, row.names = FALSE)

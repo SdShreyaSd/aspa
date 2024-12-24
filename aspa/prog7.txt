@@ -1,0 +1,116 @@
+library(dplyr)
+library(ggplot2)
+library(rsample)
+library(tidyverse)
+library(tidymodels)
+library(gridExtra)
+Purpose: These libraries are loaded for data manipulation (dplyr), visualization (ggplot2,
+gridExtra), data preparation and sampling (rsample), and modeling (tidymodels).
+2. Load and Inspect Data
+data &lt;-
+read.csv(&quot;C:\\Users\\TOSHIBA\\Desktop\\DSCE\\5thSem_ASPA\\Statistics_class\
+\Lab\\heart.csv&quot;)
+str(data)
+summary(data)
+head(data, n=10)
+Purpose:
+ read.csv() loads the dataset from the specified path.
+ str(data) provides a structure overview of the dataset, listing variable types and
+example values.
+ summary(data) gives basic statistics (like mean, min, max) for each variable.
+ head(data, n=10) displays the first 10 rows to get a quick look at the data.
+3. Handle Missing Values
+if (sum(is.na(data)) &gt; 0) {
+data &lt;- na.omit(data)
+}
+Purpose: Checks if there are any missing values in the dataset. If there are, na.omit(data)
+removes rows containing missing values.
+4. Convert Categorical Variables to Factors
+data$sex &lt;- as.factor(data$sex)
+
+data$cp &lt;- as.factor(data$cp)
+data$fbs &lt;- as.factor(data$fbs)
+data$restecg &lt;- as.factor(data$restecg)
+data$exang &lt;- as.factor(data$exang)
+data$slope &lt;- as.factor(data$slope)
+data$thal &lt;- as.factor(data$thal)
+Purpose: Converts categorical variables into factors so that they are treated as categories, not
+numeric values, for modeling purposes.
+5. Recode the Target Variable
+data$target &lt;- ifelse(data$target == 1, &quot;high-risk&quot;, &quot;low-risk&quot;)
+data$target &lt;- as.factor(data$target)
+Purpose:
+ The ifelse() function recodes the target variable, mapping 1 to &quot;high-risk&quot; and
+0 to &quot;low-risk&quot;.
+ as.factor() then converts this variable into a factor for categorical treatment in the
+model.
+6. Data Splitting into Training and Testing Sets
+dt = sort(sample(nrow(data), nrow(data)*.7))
+train &lt;- data[dt,]
+test &lt;- data[-dt,]
+Purpose:
+ Randomly splits the data into 70% training (train) and 30% testing (test) subsets.
+ The sample() function selects random row indices, and these indices are sorted and
+used to split the data.
+
+7. Model Training with Logistic Regression
+heart_model &lt;- glm(target~., data = train, family = &quot;binomial&quot;)
+summary(heart_model)
+Purpose:
+ Fits a logistic regression model (glm) to the training data, where target is the
+response variable, and all other variables are predictors.
+ The family = &quot;binomial&quot; argument specifies logistic regression, appropriate for
+binary classification.
+ summary(heart_model) displays model coefficients and statistics.
+8. Make Predictions on Test Set
+predictions_prob &lt;- predict(heart_model, newdata = test, type = &quot;response&quot;)
+
+predictions_class &lt;- ifelse(predictions_prob &gt; 0.5, &quot;high-risk&quot;, &quot;low-
+risk&quot;)
+predictions_class &lt;- as.factor(predictions_class)
+Purpose:
+ predict() computes predicted probabilities for the test set.
+ The ifelse() function converts these probabilities into binary classes based on a 0.5
+threshold: values above 0.5 are classified as &quot;high-risk&quot;, others as &quot;low-risk&quot;.
+ Finally, as.factor() converts predictions to a factor to match the format of the true
+target variable.
+9. Ensure Matching Levels for Comparison
+test$target &lt;- factor(test$target, levels = c(&quot;high-risk&quot;, &quot;low-risk&quot;))
+Purpose: Ensures that the factor levels in the test$target match those in
+predictions_class so they can be compared directly without errors.
+10. Evaluate Model with Confusion Matrix
+confusion_matrix &lt;- confusionMatrix(predictions_class, test$target)
+print(confusion_matrix)
+Purpose:
+ confusionMatrix() calculates the confusion matrix, which provides metrics like
+accuracy, sensitivity, and specificity, allowing for model evaluation.
+ print(confusion_matrix) displays these results.
+11. Summarize and Plot Actual vs. Predicted Counts
+
+results &lt;- data.frame(Actual = test$target, Predicted = predictions_class)
+results_summary &lt;- results %&gt;%
+group_by(Actual, Predicted) %&gt;%
+summarise(Count = n())
+ggplot(results_summary, aes(x = Actual, y = Count, fill = Predicted)) +
+geom_bar(stat = &quot;identity&quot;, position = &quot;dodge&quot;) +
+labs(title = &quot;Comparison of Actual and Predicted Risk Categories&quot;,
+x = &quot;Actual Risk Category&quot;,
+y = &quot;Count&quot;,
+fill = &quot;Predicted Risk Category&quot;) +
+theme_minimal()
+Purpose:
+ Creates a data frame results with actual and predicted labels.
+ Summarizes counts for each combination of actual and predicted labels.
+ Plots a bar chart to visually compare actual and predicted categories.
+12. Analyze High-Risk Patients by Sex
+
+high_risk_data &lt;- data %&gt;% filter(target == &quot;high-risk&quot;)
+ggplot(high_risk_data, aes(x = sex, fill = sex)) +
+geom_bar() +
+labs(title = &quot;Proportion of High-Risk Heart Disease Patients by Sex&quot;,
+x = &quot;Sex&quot;,
+y = &quot;Count of High-Risk Patients&quot;,
+fill = &quot;Sex&quot;) +
+scale_x_discrete(labels = c(&quot;0&quot; = &quot;Female&quot;, &quot;1&quot; = &quot;Male&quot;)) +
+theme_minimal() +
+theme(legend.position = &quot;none&quot;)

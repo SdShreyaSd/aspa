@@ -1,0 +1,42 @@
+library(caret) # For model training
+library(caTools) # For train-test split
+library(ggplot2) # For visualization
+# Step 2: Load the dataset
+house_data &lt;- read.csv(&quot;C:\\path_to_dataset\\house_prices.csv&quot;)
+# Step 3: Explore the data
+str(house_data) # View the structure of the dataset
+summary(house_data) # Get summary statistics
+head(house_data) # View the first few rows of the dataset
+# Step 4: Preprocess the data
+# Check for missing values
+sum(is.na(house_data))
+# Remove rows with missing values (if needed)
+house_data &lt;- na.omit(house_data)
+# Step 5: Split the dataset into training and testing sets
+set.seed(123) # Set seed for reproducibility
+split &lt;- sample.split(house_data$price, SplitRatio = 0.8)
+train_data &lt;- subset(house_data, split == TRUE)
+test_data &lt;- subset(house_data, split == FALSE)
+# Step 6: Build the regression model (e.g., linear regression)
+model &lt;- lm(price ~ ., data = train_data)
+# Step 7: Make predictions on the test data
+predictions &lt;- predict(model, newdata = test_data)
+# Step 8: Evaluate the model&#39;s performance
+# Calculate Mean Squared Error (MSE)
+mse &lt;- mean((predictions - test_data$price)^2)
+print(paste(&quot;Mean Squared Error:&quot;, mse))
+# Calculate Mean Absolute Error (MAE)
+mae &lt;- mean(abs(predictions - test_data$price))
+print(paste(&quot;Mean Absolute Error:&quot;, mae))
+# Calculate R-squared
+rss &lt;- sum((test_data$price - predictions)^2)
+tss &lt;- sum((test_data$price - mean(test_data$price))^2)
+r_squared &lt;- 1 - (rss/tss)
+print(paste(&quot;R-squared:&quot;, r_squared))
+# Step 9: Visualize the predicted vs actual prices
+ggplot(data = test_data, aes(x = price, y = predictions)) +
+geom_point(color = &#39;blue&#39;) +
+geom_abline(intercept = 0, slope = 1, color = &#39;red&#39;) +
+ggtitle(&quot;Actual vs Predicted House Prices&quot;) +
+xlab(&quot;Actual Prices&quot;) +
+ylab(&quot;Predicted Prices&quot;)
